@@ -1,1 +1,13 @@
 
+{
+  "name": "boost-pipeline",
+  "version": "1.0.0",
+  "description": "Automated server boost dispatching system",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "discord.js-selfbot-v13": "^2.14.9"
+  }
+}
