@@ -1,1 +1,6 @@
 
+{
+  "prefix": "!",
+  "operators": [""],
+  "delayMs": 2500
+}
