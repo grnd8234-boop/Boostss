@@ -1,0 +1,65 @@
+const { Client } = require('discord.js-selfbot-v13');
+
+async function runBoostRoutine(tokens, guildId, targetBoostsCount, delayMs = 2500) {
+    let appliedBoosts = 0;
+    let failedAccounts = 0;
+
+    for (let i = 0; i < tokens.length; i++) {
+        if (appliedBoosts >= targetBoostsCount) {
+            console.log(`[TARGET_REACHED] Target count of ${targetBoostsCount} boosts satisfied.`);
+            break;
+        }
+
+        const token = tokens[i];
+        const worker = new Client({ checkUpdate: false });
+
+        try {
+            await worker.login(token);
+
+            await new Promise(res => setTimeout(res, delayMs));
+
+            const guild = await worker.guilds.fetch(guildId).catch(() => null);
+            if (!guild) {
+                console.log(`[SKIP] Worker ${worker.user.tag} not in guild.`);
+                failedAccounts++;
+                worker.destroy();
+                continue;
+            }
+
+            const boostSlots = await worker.api.users('@me').guilds(guildId).boosts.get().catch(() => null);
+
+            if (!boostSlots || boostSlots.length === 0) {
+                console.log(`[NO_SLOTS] Worker ${worker.user.tag} has no available slots.`);
+                failedAccounts++;
+                worker.destroy();
+                continue;
+            }
+
+            const remainingBoostsNeeded = targetBoostsCount - appliedBoosts;
+            const slotsToUse = boostSlots.slice(0, remainingBoostsNeeded);
+
+            const res = await worker.api.guilds(guildId)
+                .premium(worker.user.id)
+                .subscriptions.post({
+                    body: { user_premium_guild_subscriptions: slotsToUse }
+                }).catch(err => ({ error: err }));
+
+            if (res && !res.error) {
+                const countAppliedThisAccount = slotsToUse.length;
+                appliedBoosts += countAppliedThisAccount;
+                console.log(`[SUCCESS] Worker ${worker.user.tag} applied${countAppliedThisAccount} boost(s). Progress: ${appliedBoosts}/${targetBoostsCount}`);
+            } else {
+                failedAccounts++;
+            }
+        } catch (err) {
+            failedAccounts++;
+        } finally {
+            if (worker) worker.destroy();
+        }
+    }
+
+    return { appliedBoosts, failedAccounts };
+}
+
+module.exports = runBoostRoutine;
+
